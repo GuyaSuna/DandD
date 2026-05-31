@@ -51,6 +51,12 @@ export default async function DungeonMasterCampaignPage({ params }) {
         >
           Vista publica
         </Link>
+        <Link
+          href={`/dm/campanias/${campaign.id}/enemigos`}
+          className="h-10 rounded-md bg-zinc-950 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Enemigos
+        </Link>
       </header>
 
       <section>

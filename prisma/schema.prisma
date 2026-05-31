@@ -12,6 +12,13 @@ enum UserRole {
   ADMIN
 }
 
+enum HealthLogType {
+  DAMAGE
+  HEAL
+  SET
+  TEMP
+}
+
 model User {
   id        String     @id @default(cuid())
   name      String?
@@ -23,6 +30,8 @@ model User {
 
   campaigns  Campaign[] @relation("CampaignDungeonMaster")
   characters Character[]
+  healthLogs CharacterHealthLog[] @relation("HealthLogCreatedBy")
+  dmNotes    CharacterDMNote[]    @relation("DMNoteCreatedBy")
 }
 
 model Campaign {
@@ -36,6 +45,9 @@ model Campaign {
 
   dungeonMaster User        @relation("CampaignDungeonMaster", fields: [dungeonMasterId], references: [id], onDelete: Cascade)
   characters    Character[]
+  healthLogs    CharacterHealthLog[]
+  dmNotes       CharacterDMNote[]
+  enemies       Enemy[]
 
   @@index([dungeonMasterId])
   @@index([inviteCode])
@@ -105,10 +117,76 @@ model Character {
   race      Race           @relation(fields: [raceId], references: [id])
   subrace   Subrace?       @relation(fields: [subraceId], references: [id])
   class     CharacterClass @relation(fields: [classId], references: [id])
+  healthLogs CharacterHealthLog[]
+  dmNotes    CharacterDMNote[]
 
   @@index([playerId])
   @@index([campaignId])
   @@index([raceId])
   @@index([subraceId])
   @@index([classId])
+}
+
+model CharacterHealthLog {
+  id          String        @id @default(cuid())
+  characterId String
+  campaignId  String?
+  amount      Int
+  previousHp  Int
+  newHp       Int
+  type        HealthLogType
+  reason      String?       @db.Text
+  createdById String?
+  createdAt   DateTime      @default(now())
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  campaign  Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  createdBy User?     @relation("HealthLogCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([characterId])
+  @@index([campaignId])
+  @@index([createdById])
+}
+
+model CharacterDMNote {
+  id          String   @id @default(cuid())
+  characterId String
+  campaignId  String
+  title       String?
+  content     String   @db.Text
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  campaign  Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("DMNoteCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([characterId])
+  @@index([campaignId])
+  @@index([createdById])
+}
+
+model Enemy {
+  id           String   @id @default(cuid())
+  campaignId   String
+  name         String
+  description  String?  @db.Text
+  maxHp        Int
+  currentHp    Int
+  armorClass   Int
+  strength     Int      @default(10)
+  dexterity    Int      @default(10)
+  constitution Int      @default(10)
+  intelligence Int      @default(10)
+  wisdom       Int      @default(10)
+  charisma     Int      @default(10)
+  attacks      Json?
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
 }

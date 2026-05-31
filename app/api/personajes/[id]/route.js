@@ -73,17 +73,36 @@ export async function PATCH(request, { params }) {
     return Response.json({ error: "currentHp debe estar entre 0 y la vida maxima." }, { status: 400 });
   }
 
-  const updatedCharacter = await prisma.character.update({
-    where: { id },
-    data: { currentHp: nextCurrentHp },
-    include: {
-      player: { select: { id: true, name: true, email: true, role: true } },
-      campaign: { select: { id: true, name: true, dungeonMasterId: true } },
-      race: true,
-      subrace: true,
-      class: true,
-    },
-  });
+  const previousHp = character.currentHp;
+  const amount = Math.abs(nextCurrentHp - previousHp);
+  const type =
+    nextCurrentHp < previousHp ? "DAMAGE" : nextCurrentHp > previousHp ? "HEAL" : "SET";
+
+  const [updatedCharacter] = await prisma.$transaction([
+    prisma.character.update({
+      where: { id },
+      data: { currentHp: nextCurrentHp },
+      include: {
+        player: { select: { id: true, name: true, email: true, role: true } },
+        campaign: { select: { id: true, name: true, dungeonMasterId: true } },
+        race: true,
+        subrace: true,
+        class: true,
+      },
+    }),
+    prisma.characterHealthLog.create({
+      data: {
+        characterId: character.id,
+        campaignId: character.campaignId,
+        amount,
+        previousHp,
+        newHp: nextCurrentHp,
+        type,
+        reason: body.reason?.trim() || null,
+        createdById: user.id,
+      },
+    }),
+  ]);
 
   return Response.json(updatedCharacter);
 }

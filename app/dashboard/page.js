@@ -59,7 +59,7 @@ export default async function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Section title="Mis personajes">
           {characters.map((character) => (
-            <Card key={character.id} href={`/api/personajes/${character.id}`}>
+            <Card key={character.id} href={`/personajes/${character.id}`}>
               <h3 className="font-semibold">{character.name}</h3>
               <p className="mt-1 text-sm text-zinc-600">
                 {character.race.name} {character.class.name} nivel {character.level}
