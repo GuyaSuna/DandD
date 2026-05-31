@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum UserRole {
+  PLAYER
+  DUNGEON_MASTER
+  ADMIN
+}
+
+model User {
+  id        String     @id @default(cuid())
+  name      String?
+  email     String     @unique
+  password  String?
+  role      UserRole   @default(PLAYER)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  campaigns  Campaign[] @relation("CampaignDungeonMaster")
+  characters Character[]
+}
+
+model Campaign {
+  id              String      @id @default(cuid())
+  name            String
+  inviteCode      String      @unique
+  description     String?     @db.Text
+  dungeonMasterId String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  dungeonMaster User        @relation("CampaignDungeonMaster", fields: [dungeonMasterId], references: [id], onDelete: Cascade)
+  characters    Character[]
+
+  @@index([dungeonMasterId])
+  @@index([inviteCode])
+}
+
+model Race {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?    @db.Text
+  speed       Int        @default(30)
+  traits      Json?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  subraces   Subrace[]
+  characters Character[]
+}
+
+model Subrace {
+  id          String      @id @default(cuid())
+  name        String
+  description String?     @db.Text
+  traits      Json?
+  raceId      String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  race       Race        @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  characters Character[]
+
+  @@unique([raceId, name])
+  @@index([raceId])
+}
+
+model CharacterClass {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  description String?     @db.Text
+  hitDie      Int
+  primaryStat String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  characters Character[]
+}
+
+model Character {
+  id          String   @id @default(cuid())
+  name        String
+  level       Int      @default(1)
+  maxHp       Int
+  currentHp   Int
+  attributes  Json
+  backstory   String?  @db.Text
+  traits      Json?
+  inventory   Json?
+  playerId    String
+  campaignId  String?
+  raceId      String
+  subraceId   String?
+  classId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  player    User           @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  campaign  Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  race      Race           @relation(fields: [raceId], references: [id])
+  subrace   Subrace?       @relation(fields: [subraceId], references: [id])
+  class     CharacterClass @relation(fields: [classId], references: [id])
+
+  @@index([playerId])
+  @@index([campaignId])
+  @@index([raceId])
+  @@index([subraceId])
+  @@index([classId])
+}
