@@ -32,6 +32,15 @@ const attributeLabels = {
   charisma: "Carisma",
 };
 
+const primaryStatLabels = {
+  strength: "Fuerza",
+  dexterity: "Destreza",
+  constitution: "Constitucion",
+  intelligence: "Inteligencia",
+  wisdom: "Sabiduria",
+  charisma: "Carisma",
+};
+
 export default function CreateCharacterPage() {
   const { status } = useSession();
   const [step, setStep] = useState(0);
@@ -371,7 +380,7 @@ function StepContent({
           options={classes}
           selectedId={form.classId}
           onSelect={(id) => updateField("classId", id)}
-          detail={(characterClass) => `d${characterClass.hitDie} - ${characterClass.primaryStat}`}
+          detail={(characterClass) => `d${characterClass.hitDie} - ${primaryStatLabels[characterClass.primaryStat] || characterClass.primaryStat}`}
         />
         {selectedClass ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -480,10 +489,10 @@ function CreatedState({ character }) {
         {character.name} quedo guardado con {character.currentHp}/{character.maxHp} puntos de vida.
       </p>
       <a
-        href={`/api/personajes/${character.id}`}
+        href={`/personajes/${character.id}`}
         className="mt-4 inline-flex h-10 items-center rounded-md bg-emerald-800 px-4 text-sm font-semibold text-white"
       >
-        Ver JSON
+        Ver ficha
       </a>
     </div>
   );

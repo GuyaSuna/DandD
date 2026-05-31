@@ -19,6 +19,36 @@ enum HealthLogType {
   TEMP
 }
 
+enum CombatStatus {
+  ACTIVE
+  FINISHED
+  CANCELLED
+}
+
+enum CombatParticipantType {
+  CHARACTER
+  ENEMY
+}
+
+enum ItemType {
+  WEAPON
+  ARMOR
+  POTION
+  TOOL
+  TREASURE
+  DOCUMENT
+  MAGIC
+  OTHER
+}
+
+enum ItemRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+}
+
 model User {
   id        String     @id @default(cuid())
   name      String?
@@ -32,6 +62,8 @@ model User {
   characters Character[]
   healthLogs CharacterHealthLog[] @relation("HealthLogCreatedBy")
   dmNotes    CharacterDMNote[]    @relation("DMNoteCreatedBy")
+  combats    Combat[]             @relation("CombatCreatedBy")
+  inventoryItems InventoryItem[]   @relation("InventoryItemCreatedBy")
 }
 
 model Campaign {
@@ -48,6 +80,7 @@ model Campaign {
   healthLogs    CharacterHealthLog[]
   dmNotes       CharacterDMNote[]
   enemies       Enemy[]
+  combats       Combat[]
 
   @@index([dungeonMasterId])
   @@index([inviteCode])
@@ -100,6 +133,7 @@ model Character {
   level       Int      @default(1)
   maxHp       Int
   currentHp   Int
+  armorClass  Int      @default(10)
   attributes  Json
   backstory   String?  @db.Text
   traits      Json?
@@ -119,12 +153,38 @@ model Character {
   class     CharacterClass @relation(fields: [classId], references: [id])
   healthLogs CharacterHealthLog[]
   dmNotes    CharacterDMNote[]
+  combatParticipants CombatParticipant[]
+  inventoryItems InventoryItem[]
 
   @@index([playerId])
   @@index([campaignId])
   @@index([raceId])
   @@index([subraceId])
   @@index([classId])
+}
+
+model InventoryItem {
+  id          String     @id @default(cuid())
+  characterId String
+  name        String
+  description String?    @db.Text
+  quantity    Int        @default(1)
+  type        ItemType   @default(OTHER)
+  rarity      ItemRarity @default(COMMON)
+  isEquipped  Boolean    @default(false)
+  weight      Float?
+  value       Int?
+  createdById String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation("InventoryItemCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([characterId])
+  @@index([createdById])
+  @@index([type])
+  @@index([rarity])
 }
 
 model CharacterHealthLog {
@@ -187,6 +247,53 @@ model Enemy {
   updatedAt    DateTime @updatedAt
 
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  combatParticipants CombatParticipant[]
 
   @@index([campaignId])
+}
+
+model Combat {
+  id               String       @id @default(cuid())
+  campaignId       String
+  name             String
+  status           CombatStatus @default(ACTIVE)
+  currentTurnIndex Int          @default(0)
+  round            Int          @default(1)
+  createdById      String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  campaign     Campaign            @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  createdBy    User                @relation("CombatCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  participants CombatParticipant[]
+
+  @@index([campaignId])
+  @@index([createdById])
+  @@index([status])
+}
+
+model CombatParticipant {
+  id           String                @id @default(cuid())
+  combatId     String
+  characterId  String?
+  enemyId      String?
+  name         String
+  type         CombatParticipantType
+  initiative   Int
+  turnOrder    Int
+  maxHp        Int
+  currentHp    Int
+  armorClass   Int
+  isDefeated   Boolean               @default(false)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  combat    Combat     @relation(fields: [combatId], references: [id], onDelete: Cascade)
+  character Character? @relation(fields: [characterId], references: [id], onDelete: SetNull)
+  enemy     Enemy?     @relation(fields: [enemyId], references: [id], onDelete: SetNull)
+
+  @@index([combatId])
+  @@index([characterId])
+  @@index([enemyId])
+  @@index([turnOrder])
 }

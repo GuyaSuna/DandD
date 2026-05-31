@@ -2,6 +2,15 @@
 
 import { useState } from "react";
 
+const emptyAttack = {
+  name: "",
+  bonus: 0,
+  damage: "",
+  damageType: "",
+  range: "",
+  description: "",
+};
+
 const emptyForm = {
   name: "",
   description: "",
@@ -14,18 +23,36 @@ const emptyForm = {
   intelligence: 10,
   wisdom: 10,
   charisma: 10,
-  attacksText: "",
+  attacks: [],
   notes: "",
+};
+
+const attributeLabels = {
+  strength: "FUE",
+  dexterity: "DES",
+  constitution: "CON",
+  intelligence: "INT",
+  wisdom: "SAB",
+  charisma: "CAR",
 };
 
 export default function EnemyManager({ campaignId, initialEnemies }) {
   const [enemies, setEnemies] = useState(initialEnemies);
   const [form, setForm] = useState(emptyForm);
+  const [attackForm, setAttackForm] = useState(emptyAttack);
   const [editingId, setEditingId] = useState("");
   const [error, setError] = useState("");
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateAttackField(field, value) {
+    setAttackForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function normalizeAttacks(attacks) {
+    return Array.isArray(attacks) ? attacks : [];
   }
 
   function enemyToForm(enemy) {
@@ -41,18 +68,12 @@ export default function EnemyManager({ campaignId, initialEnemies }) {
       intelligence: enemy.intelligence,
       wisdom: enemy.wisdom,
       charisma: enemy.charisma,
-      attacksText: enemy.attacks ? JSON.stringify(enemy.attacks, null, 2) : "",
+      attacks: normalizeAttacks(enemy.attacks),
       notes: enemy.notes || "",
     };
   }
 
   function payloadFromForm() {
-    let attacks = null;
-
-    if (form.attacksText.trim()) {
-      attacks = JSON.parse(form.attacksText);
-    }
-
     return {
       ...form,
       maxHp: Number(form.maxHp),
@@ -64,8 +85,39 @@ export default function EnemyManager({ campaignId, initialEnemies }) {
       intelligence: Number(form.intelligence),
       wisdom: Number(form.wisdom),
       charisma: Number(form.charisma),
-      attacks,
+      attacks: form.attacks.length ? form.attacks : null,
     };
+  }
+
+  function addAttack() {
+    if (!attackForm.name.trim()) {
+      setError("El ataque necesita un nombre.");
+      return;
+    }
+
+    setError("");
+    setForm((current) => ({
+      ...current,
+      attacks: [
+        ...current.attacks,
+        {
+          name: attackForm.name.trim(),
+          bonus: Number(attackForm.bonus) || 0,
+          damage: attackForm.damage.trim(),
+          damageType: attackForm.damageType.trim(),
+          range: attackForm.range.trim(),
+          description: attackForm.description.trim(),
+        },
+      ],
+    }));
+    setAttackForm(emptyAttack);
+  }
+
+  function removeAttack(index) {
+    setForm((current) => ({
+      ...current,
+      attacks: current.attacks.filter((attack, attackIndex) => attackIndex !== index),
+    }));
   }
 
   async function saveEnemy(event) {
@@ -90,6 +142,7 @@ export default function EnemyManager({ campaignId, initialEnemies }) {
         editingId ? current.map((enemy) => (enemy.id === data.id ? data : enemy)) : [data, ...current]
       );
       setForm(emptyForm);
+      setAttackForm(emptyAttack);
       setEditingId("");
     } catch (saveError) {
       setError(saveError.message);
@@ -127,11 +180,12 @@ export default function EnemyManager({ campaignId, initialEnemies }) {
     if (editingId === enemyId) {
       setEditingId("");
       setForm(emptyForm);
+      setAttackForm(emptyAttack);
     }
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
       <form onSubmit={saveEnemy} className="rounded-md border border-zinc-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-bold">{editingId ? "Editar enemigo" : "Crear enemigo"}</h2>
         {error ? (
@@ -148,17 +202,38 @@ export default function EnemyManager({ campaignId, initialEnemies }) {
             <TextInput label="CA" type="number" value={form.armorClass} onChange={(value) => updateField("armorClass", value)} />
           </div>
           <div className="grid grid-cols-3 gap-3">
-            {["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"].map((attribute) => (
+            {Object.entries(attributeLabels).map(([attribute, label]) => (
               <TextInput
                 key={attribute}
-                label={attribute.slice(0, 3).toUpperCase()}
+                label={label}
                 type="number"
                 value={form[attribute]}
                 onChange={(value) => updateField(attribute, value)}
               />
             ))}
           </div>
-          <TextArea label="Ataques JSON" value={form.attacksText} onChange={(value) => updateField("attacksText", value)} />
+
+          <section className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
+            <h3 className="text-sm font-semibold uppercase text-zinc-500">Ataques</h3>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <TextInput label="Nombre del ataque" value={attackForm.name} onChange={(value) => updateAttackField("name", value)} />
+              <TextInput label="Bonificador" type="number" value={attackForm.bonus} onChange={(value) => updateAttackField("bonus", value)} />
+              <TextInput label="Dano" value={attackForm.damage} onChange={(value) => updateAttackField("damage", value)} />
+              <TextInput label="Tipo de dano" value={attackForm.damageType} onChange={(value) => updateAttackField("damageType", value)} />
+              <TextInput label="Alcance" value={attackForm.range} onChange={(value) => updateAttackField("range", value)} />
+              <TextInput label="Descripcion" value={attackForm.description} onChange={(value) => updateAttackField("description", value)} />
+            </div>
+            <button
+              type="button"
+              onClick={addAttack}
+              className="mt-3 h-9 rounded-md border border-zinc-300 bg-white px-3 text-sm font-semibold"
+            >
+              Agregar ataque
+            </button>
+
+            <AttackList attacks={form.attacks} onRemove={removeAttack} editable />
+          </section>
+
           <TextArea label="Notas" value={form.notes} onChange={(value) => updateField("notes", value)} />
         </div>
         <div className="mt-5 flex gap-2">
@@ -171,6 +246,7 @@ export default function EnemyManager({ campaignId, initialEnemies }) {
               onClick={() => {
                 setEditingId("");
                 setForm(emptyForm);
+                setAttackForm(emptyAttack);
               }}
               className="h-10 rounded-md border border-zinc-300 px-4 text-sm font-semibold"
             >
@@ -192,6 +268,7 @@ export default function EnemyManager({ campaignId, initialEnemies }) {
                   <h3 className="font-semibold">{enemy.name}</h3>
                   <p className="mt-1 text-sm text-zinc-600">CA {enemy.armorClass}</p>
                   {enemy.description ? <p className="mt-2 text-sm text-zinc-700">{enemy.description}</p> : null}
+                  <AttackList attacks={normalizeAttacks(enemy.attacks)} />
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
@@ -224,6 +301,7 @@ export default function EnemyManager({ campaignId, initialEnemies }) {
                       onClick={() => {
                         setEditingId(enemy.id);
                         setForm(enemyToForm(enemy));
+                        setAttackForm(emptyAttack);
                       }}
                       className="h-9 rounded-md border border-zinc-300 px-3 text-sm font-semibold"
                     >
@@ -244,6 +322,42 @@ export default function EnemyManager({ campaignId, initialEnemies }) {
           {!enemies.length ? <p className="p-5 text-sm text-zinc-600">Todavia no hay enemigos creados.</p> : null}
         </div>
       </section>
+    </div>
+  );
+}
+
+function AttackList({ attacks, onRemove, editable = false }) {
+  if (!attacks.length) {
+    return <p className="mt-3 text-sm text-zinc-500">Sin ataques cargados.</p>;
+  }
+
+  return (
+    <div className="mt-3 grid gap-2">
+      {attacks.map((attack, index) => (
+        <div key={`${attack.name}-${index}`} className="rounded-md border border-zinc-200 bg-white p-3 text-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-semibold">{attack.name}</p>
+              <p className="mt-1 text-zinc-600">
+                Bonif. {Number(attack.bonus) >= 0 ? `+${attack.bonus}` : attack.bonus}
+                {attack.damage ? ` · ${attack.damage}` : ""}
+                {attack.damageType ? ` ${attack.damageType}` : ""}
+                {attack.range ? ` · ${attack.range}` : ""}
+              </p>
+              {attack.description ? <p className="mt-1 text-zinc-600">{attack.description}</p> : null}
+            </div>
+            {editable ? (
+              <button
+                type="button"
+                onClick={() => onRemove(index)}
+                className="text-sm font-semibold text-red-700"
+              >
+                Eliminar
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

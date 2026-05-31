@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import InventoryManager from "@/app/components/InventoryManager";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
@@ -88,6 +89,11 @@ export default async function CharacterPage({ params }) {
           </div>
         </section>
       </div>
+
+      <section className="mt-6">
+        <h2 className="mb-4 text-lg font-bold">Inventario</h2>
+        <InventoryManager characterId={character.id} />
+      </section>
     </main>
   );
 }

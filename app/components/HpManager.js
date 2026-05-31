@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import InventoryManager from "@/app/components/InventoryManager";
 
 export default function HpManager({ characters }) {
   const [rows, setRows] = useState(characters);
@@ -105,13 +107,21 @@ export default function HpManager({ characters }) {
                 <p className="mt-1 text-sm text-zinc-600">
                   {character.player?.name || character.player?.email} - {character.race.name} {character.class.name} nivel {character.level}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => toggleDetails(character.id)}
-                  className="mt-3 h-9 rounded-md border border-zinc-300 px-3 text-sm font-semibold text-zinc-900"
-                >
-                  {expandedId === character.id ? "Ocultar detalles" : "Ver historial y notas"}
-                </button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleDetails(character.id)}
+                    className="h-9 rounded-md border border-zinc-300 px-3 text-sm font-semibold text-zinc-900"
+                  >
+                    {expandedId === character.id ? "Ocultar detalles" : "Ver historial, notas e inventario"}
+                  </button>
+                  <Link
+                    href={`/personajes/${character.id}`}
+                    className="h-9 rounded-md border border-zinc-300 px-3 py-2 text-sm font-semibold text-zinc-900"
+                  >
+                    Ficha
+                  </Link>
+                </div>
               </div>
               <div className="space-y-2">
                 <label className="block">
@@ -212,6 +222,10 @@ export default function HpManager({ characters }) {
                     ))}
                     {!(notes[character.id] || []).length ? <p className="text-sm text-zinc-600">Sin notas privadas.</p> : null}
                   </div>
+                </section>
+                <section className="rounded-md border border-zinc-200 bg-zinc-50 p-4 lg:col-span-2">
+                  <h4 className="mb-3 font-semibold">Inventario</h4>
+                  <InventoryManager characterId={character.id} compact />
                 </section>
               </div>
             ) : null}

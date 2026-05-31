@@ -57,6 +57,12 @@ export default async function DungeonMasterCampaignPage({ params }) {
         >
           Enemigos
         </Link>
+        <Link
+          href={`/dm/campanias/${campaign.id}/combates`}
+          className="h-10 rounded-md bg-amber-700 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Combates
+        </Link>
       </header>
 
       <section>
